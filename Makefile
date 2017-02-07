@@ -1,0 +1,8 @@
+REGISTRY_ID ?= 115159323386
+REGISTRY_REGION ?= ap-southeast-2
+REGISTRY ?= $(REGISTRY_ID).dkr.ecr.$(REGISTRY_REGION).amazonaws.com
+REGISTRY_NAMESPACE ?= base
+REPO ?= $(REGISTRY)/$(REGISTRY_NAMESPACE)
+USECACHE = true
+DRYRUN = true
+include docker-ci.mk
