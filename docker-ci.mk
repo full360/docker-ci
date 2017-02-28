@@ -61,6 +61,9 @@ endif
 
 ifdef LOCALONLY
 override DOCKER_CI_REPO=
+override PULL=
+else
+PULL=--pull
 endif
 
 # Default is to not cache when building
@@ -237,7 +240,7 @@ endif
 	$(foreach B,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS),$(eval IMAGEDOCKERBUILDARGS+=--build-arg $(B)))
 	@echo Building: $< && \
 	cd $(dir $<) && \
-	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) $(IMAGEDOCKERBUILDARGS) --pull -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
+	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) $(IMAGEDOCKERBUILDARGS) $(PULL) -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
 	$(eval IMAGEDOCKERBUILDARGS=)
 
 # .PHONY: build
