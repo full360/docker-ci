@@ -287,41 +287,41 @@ clean:
 
 .PHONY: mkhelp
 mkhelp:
-	$(info Available docker-ci.mk targets:             )
-	$(foreach O, $(OPERATIONS),  $(info | $(O))        )
-	$(info | clean                                     )
-	$(info | mkhelp                                    )
-	$(info | showgroups                                )
-	$(info | showimages                                )
-	$(info | inspectgroup.GROUP                        )
-	$(info | inspectimg.IMAGE                          )
-	$(info | inspect.VAR                               )
+	$(info Available docker-ci.mk targets:       )
+	$(foreach O, $(OPERATIONS),  $(info | $(O))  )
+	$(info | clean                               )
+	$(info | mkhelp                              )
+	$(info | showgroups                          )
+	$(info | showimages                          )
+	$(info | inspectgroup.GROUP                  )
+	$(info | inspectimg.IMAGE                    )
+	$(info | inspect.VAR                         )
 	@exit 0
 
 .PHONY: showimages
 showimages:
-	$(foreach I, $(IMAGES),  $(info | $(I)))
+	$(foreach I, $(IMAGES),  $(info | $(I))      )
 	@exit 0
 
 .PHONY: showgroups
 showgroups:
-	$(foreach G, $(GROUPS), $(info | $(G)))
+	$(foreach G, $(GROUPS), $(info | $(G))       )
 	@exit 0
 
 inspectgroup.%:
-	$(info Available targets for $*:                                  )
-	$(info | $*                                                       )
-	$(foreach O, $(OPERATIONS),  $(info | $(O)-$*)                     )
-	$(info                                                            )
-	$(info Images associated with $*:                                 )
-	$(foreach F, $($(call ucase,$*)DEPS),$(info | $(notdir $F))       )
+	$(info Available targets for $*:                               )
+	$(info | $*                                                    )
+	$(foreach O, $(OPERATIONS),  $(info | $(O)-$*)                 )
+	$(info                                                         )
+	$(info Images associated with $*:                              )
+	$(foreach F, $($(call ucase,$*)DEPS),$(info | $(notdir $F))    )
 	@exit 0
 
 inspectimg.%:
-	$(info Dockerfile associated with $*:               )
+	$(info Dockerfile associated with $*:                          )
 	$(info | ./$(dir $(filter %$*, $(BUILDSEMAPHORES)))Dockerfile  )
 	$(foreach O, $(OPERATIONS), \
-	  $(foreach I, $(IMAGES),  $(info | $(O)-$(I))))
+	  $(foreach I, $(IMAGES),  $(info | $(O)-$(I)))                )
 	@exit 0
 
 # %: all
