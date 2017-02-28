@@ -45,9 +45,12 @@ endif
 
 ifndef DOCKERBUILDARGS
 DOCKERBUILDARGS=
-else
-$(info buildargs: $(DOCKERBUILDARGS))
 endif
+
+ifndef IMAGEDOCKERBUILDARGS
+IMAGEDOCKERBUILDARGS=
+endif
+
 
 # Default is to not cache when building
 ifndef NOCACHE
@@ -56,6 +59,9 @@ else
 override NOCACHE=
 endif
 
+ifdef LOCALONLY
+override DOCKER_CI_REPO=
+endif
 
 # Default is to not cache when building
 ifdef DRY_RUN
@@ -77,16 +83,12 @@ ifndef ECRACCOUNTID
 ifneq (,$(findstring dkr.ecr,$(DOCKER_CI_REPO)))
 ECRACCOUNTID := $(firstword $(subst ., ,$(DOCKER_CI_REPO)))
 AWSECRNAMESPACE := $(lastword $(subst /, ,$(DOCKER_CI_REPO)))
-$(info Docker repo is AWS ECR, logging in)
-$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
 endif
 endif
 
 ifneq (,$(DOCKER_CI_REPO))
 override DOCKER_CI_REPO := $(DOCKER_CI_REPO)/
 endif
-
-$(info $(DOCKER_CI_REPO))
 
 ##########################################################################################
 # Definitions
@@ -133,8 +135,20 @@ define fix_nulls
 $(shell echo $1 |sed -e 's/null/latest/'|sed -e 's/-null//')
 endef
 
+define semaphore_from_dockerfile
+$(call group,$1)-$(call get_label,$1,majorversion)-$(call get_label,$1,imagebase)
+endef
+
+define imagebase_from_dockerfile
+$(call fix_nulls,$(call group,$1)-$(call get_label,$1,majorversion)-$(call get_label,$1,imagebase))
+endef
+
+define image_from_dockerfile
+$(call fix_nulls,$(DOCKER_CI_REPO)$(call group,$1):$(call get_label,$1,majorversion)-$(call get_label,$1,imagebase))
+endef
+
 define semaphore
-$(call fix_nulls,$2/.$1-$(call group,$2)-$(call get_label,$2/Dockerfile,majorversion)-$(call get_label,$2/Dockerfile,imagebase))
+$(call fix_nulls,$2/.$1-$(call semaphore_from_dockerfile,$2/Dockerfile))
 endef
 
 define docker_tag
@@ -142,11 +156,15 @@ $(call group,$1):$(patsubst $(call group,$1)-%,%,$(notdir $(call image,$1,$2)))
 endef
 
 define docker_tag_latest
-$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest)
+$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(call docker_tag,$1,$3) $(call group,$2):latest)
+
+$(if $(DOCKER_CI_REPO),,$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest))
 endef
 
 define docker_tag_minor
-$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
+$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(call docker_tag,$1,$3) $(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
+
+$(if $(DOCKER_CI_REPO),,$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),))
 endef
 
 define docker_push_latest
@@ -180,24 +198,25 @@ $(call ucase,$1)SEMAPHORES += $2
 # group and image depends on image_basename, depends on semaphore, depends on Dockerfile
 ##################
 
-$(call group,$2)              : $(call image_basename,$2,$1)
-
-# create a target for each image using the basename
-$(notdir $(call image,$2,$1)) : $(call image_basename,$2,$1)
-
-# create a target for each basenaem using the image
-$(call image_basename,$2,$1)  : $2
+$(call group,$2)              : $1-$(call group,$2)
 
 # create a target for the group-operation (gobuild)
-$(call group,$2)$(1)          : $2
+$1-$(call group,$2)          : $1-$(notdir $(call image,$2,$1))
 
-# set the semaphore target to be dependent on the Dockerfile
-$2                            : $(dir $2)Dockerfile
+# create a target for each image using the basename
+$(notdir $(call image,$2,$1)) : $1-$(notdir $(call image,$2,$1))
+
+# create a target for each operation-basename using the image
+$1-$(notdir $(call image,$2,$1))  : $2
+
+$2	: $(dir $2)Dockerfile
+
 endef
 
 # find all docker files in local subdirectories
 DOCKERDIRS := $(shell \
                find * -mindepth 1 -type f -name Dockerfile | xargs -L1 dirname )
+DOCKERFILES := $(DOCKERDIRS:%=%/Dockerfile)
 
 ################################################################################
 # For each operation that depends on the Dockerfile create the semaphores
@@ -210,13 +229,19 @@ $(foreach O, $(OPERATIONS), \
 ################################################################################
 # Docker Build Target
 ################################################################################
+# set the semaphore target to be dependent on the Dockerfile
 $(BUILDSEMAPHORES) :
+ifneq (,$(DOCKERBUILDARGS))
+	$(info buildargs: $(DOCKERBUILDARGS))
+endif
+	$(foreach B,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS),$(eval IMAGEDOCKERBUILDARGS+=--build-arg $(B)))
 	@echo Building: $< && \
 	cd $(dir $<) && \
-	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) --pull -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
+	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) $(IMAGEDOCKERBUILDARGS) --pull -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
+	$(eval IMAGEDOCKERBUILDARGS=)
 
-.PHONY: build
-build : $(BUILDSEMAPHORES)
+# .PHONY: build
+# build : $(BUILDSEMAPHORES)
 
 ################################################################################
 # Docker Tag Target
@@ -231,15 +256,21 @@ $(TAGSEMAPHORES) :
 tag : $(TAGSEMAPHORES)
 
 ################################################################################
-# Docker Build Target
+# Docker Push Target
 ################################################################################
 $(PUSHSEMAPHORES) :
 ifneq (,$(DOCKER_CI_REPO))
+ifdef ECRACCOUNTID
+	$(info Docker repo is AWS ECR, logging in)
+	$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
 	@$(call docker_push_latest,$@,$<,push)
 	@$(call docker_push_minor,$@,$<,push)
 	@exit 0
+endif
+else
+	@echo Local Only, not pushing
 endif
 
 .PHONY: push
@@ -250,7 +281,7 @@ all: $(GROUPS)
 
 .PHONY: clean
 clean:
-	find . -type f -name .build-* -exec rm {} \; && \
+	@find . -type f -name .build-* -exec rm {} \; && \
 	find . -type f -name .tag-* -exec rm {} \; && \
 	find . -type f -name .push-* -exec rm {} \;
 
@@ -269,7 +300,7 @@ mkhelp:
 
 .PHONY: showimages
 showimages:
-	$(foreach O, $(IMAGES),  $(info | $(O)))
+	$(foreach I, $(IMAGES),  $(info | $(I)))
 	@exit 0
 
 .PHONY: showgroups
@@ -280,7 +311,7 @@ showgroups:
 inspectgroup.%:
 	$(info Available targets for $*:                                  )
 	$(info | $*                                                       )
-	$(foreach O, $(OPERATIONS),  $(info | $*$(O))                     )
+	$(foreach O, $(OPERATIONS),  $(info | $(O)-$*)                     )
 	$(info                                                            )
 	$(info Images associated with $*:                                 )
 	$(foreach F, $($(call ucase,$*)DEPS),$(info | $(notdir $F))       )
@@ -288,7 +319,9 @@ inspectgroup.%:
 
 inspectimg.%:
 	$(info Dockerfile associated with $*:               )
-	$(info | $(dir $(filter %$*, $(IMAGES)))Dockerfile )
+	$(info | ./$(dir $(filter %$*, $(BUILDSEMAPHORES)))Dockerfile  )
+	$(foreach O, $(OPERATIONS), \
+	  $(foreach I, $(IMAGES),  $(info | $(O)-$(I))))
 	@exit 0
 
 # %: all
