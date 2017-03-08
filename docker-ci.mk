@@ -251,8 +251,8 @@ endif
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	@$(call docker_tag_latest,$@,$<,tag)
-	@$(call docker_tag_minor,$@,$<,tag)
+	$(call docker_tag_latest,$@,$<,tag)
+	$(call docker_tag_minor,$@,$<,tag)
 	@exit 0
 
 .PHONY: tag
