@@ -321,10 +321,11 @@ inspectgroup.%:
 	@exit 0
 
 inspectimg.%:
-	$(info Dockerfile associated with $*:                          )
-	$(info | ./$(dir $(filter %$*, $(BUILDSEMAPHORES)))Dockerfile  )
+	$(info Dockerfile associated with $*: \
+	  ./$(dir $(filter %$*, $(BUILDSEMAPHORES)))Dockerfile         )
+	$(info                                                         )
 	$(foreach O, $(OPERATIONS), \
-	  $(foreach I, $(IMAGES),  $(info | $(O)-$(I)))                )
+	  $(foreach I, $(filter $*,$(IMAGES)),  $(info | $(O)-$(I)))   )
 	@exit 0
 
 # %: all
