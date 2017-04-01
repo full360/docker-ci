@@ -159,13 +159,13 @@ $(call group,$1):$(patsubst $(call group,$1)-%,%,$(notdir $(call image,$1,$2)))
 endef
 
 define docker_tag_latest
-$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(call docker_tag,$1,$3) $(call group,$2):latest)
+$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest)
 
 $(if $(DOCKER_CI_REPO),,$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest))
 endef
 
 define docker_tag_minor
-$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(call docker_tag,$1,$3) $(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
+$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
 
 $(if $(DOCKER_CI_REPO),,$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),))
 endef
@@ -243,16 +243,16 @@ endif
 	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) $(IMAGEDOCKERBUILDARGS) $(PULL) -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
 	$(eval IMAGEDOCKERBUILDARGS=)
 
-# .PHONY: build
-# build : $(BUILDSEMAPHORES)
+.PHONY: build
+build : $(BUILDSEMAPHORES)
 
 ################################################################################
 # Docker Tag Target
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	$(call docker_tag_latest,$@,$<,tag)
-	$(call docker_tag_minor,$@,$<,tag)
+	@$(call docker_tag_latest,$@,$<,tag)
+	@$(call docker_tag_minor,$@,$<,tag)
 	@exit 0
 
 .PHONY: tag
