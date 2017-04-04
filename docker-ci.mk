@@ -38,20 +38,6 @@ $(warning warning - DOCKER_CI_REPO is not set. assuming local build)
 DOCKER_CI_REPO=
 endif
 
-ifdef BUILDARGS
-$(foreach B,$(BUILDARGS),$(eval DOCKERBUILDARGS+=--build-arg $(B)))
-else
-endif
-
-ifndef DOCKERBUILDARGS
-DOCKERBUILDARGS=
-endif
-
-ifndef IMAGEDOCKERBUILDARGS
-IMAGEDOCKERBUILDARGS=
-endif
-
-
 # Default is to not cache when building
 ifndef NOCACHE
 NOCACHE=--no-cache
@@ -105,6 +91,11 @@ endef
 # parse the Dockerfile to extract the build variables stored in LABEL
 define get_label
 $(shell cat $1 | awk -F'"' 'BEGIN {ver="null"} /build.publish.$2/ {ver=$$2} END { print ver }')
+endef
+
+# Generate any build arguments
+define dockerbuildargs
+$(foreach B,$1,--build-arg $B)
 endef
 
 # add item to variable if it does not already exist in list
@@ -234,14 +225,12 @@ $(foreach O, $(OPERATIONS), \
 ################################################################################
 # set the semaphore target to be dependent on the Dockerfile
 $(BUILDSEMAPHORES) :
-ifneq (,$(DOCKERBUILDARGS))
-	$(info buildargs: $(DOCKERBUILDARGS))
+ifneq (,$(call dockerbuildargs,$(BUILDARGS)))
+	$(info buildargs: $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS))
 endif
-	$(foreach B,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS),$(eval IMAGEDOCKERBUILDARGS+=--build-arg $(B)))
-	@echo Building: $< && \
+	echo Building: $< && \
 	cd $(dir $<) && \
-	$(DOCKER) build $(NOCACHE) $(DOCKERBUILDARGS) $(IMAGEDOCKERBUILDARGS) $(PULL) -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
-	$(eval IMAGEDOCKERBUILDARGS=)
+	$(DOCKER) build $(NOCACHE) $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS)) $(PULL) -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
 
 .PHONY: build
 build : $(BUILDSEMAPHORES)
