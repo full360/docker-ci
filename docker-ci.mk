@@ -114,6 +114,10 @@ define ucase
 $(shell echo $1| tr '[:lower:]' '[:upper:]')
 endef
 
+define lcase
+$(shell echo $1| tr '[:upper:]' '[:lower:]')
+endef
+
 # c name from Dockerfile relative path in FAKESEMAPHORE
 define image_basename
 $(shell echo $1 |sed -e 's/$2-//')
