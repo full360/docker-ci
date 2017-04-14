@@ -191,6 +191,9 @@ $(call add_var,$(notdir $(call image,$2,$1)),IMAGES)
 # build a list of operational semaphores to use later as a target
 $(call ucase,$1)SEMAPHORES += $2
 
+# setup the build args variable if it does not exist
+$(notdir $(call image,$2,$1)).BUILDARGS +=
+
 ##################
 # Set Dependencies with this graph
 # group and image depends on image_basename, depends on semaphore, depends on Dockerfile
