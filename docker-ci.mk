@@ -167,6 +167,7 @@ endef
 
 define docker_push_latest
 $(DOCKER) push $(DOCKER_CI_REPO)$(call docker_tag,$1,$3)
+$(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):latest
 endef
 
 define docker_push_minor
