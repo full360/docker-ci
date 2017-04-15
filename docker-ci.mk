@@ -234,7 +234,7 @@ $(foreach O, $(OPERATIONS), \
 # set the semaphore target to be dependent on the Dockerfile
 $(BUILDSEMAPHORES) :
 ifneq (,$(call dockerbuildargs,$(BUILDARGS)))
-	$(info buildargs: $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS))
+	$(info buildargs: $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS)))
 endif
 	echo Building: $< && \
 	cd $(dir $<) && \
