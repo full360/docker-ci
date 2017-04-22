@@ -153,25 +153,12 @@ define docker_tag
 $(call group,$1):$(patsubst $(call group,$1)-%,%,$(notdir $(call image,$1,$2)))
 endef
 
-define docker_tag_latest
-$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest)
-
-$(if $(DOCKER_CI_REPO),,$(if $(findstring latest,$(call docker_tag,$1,$3)),,$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):latest))
+define docker_tag_operation
+$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$4;
 endef
 
-define docker_tag_minor
-$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
-
-$(if $(DOCKER_CI_REPO),,$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),))
-endef
-
-define docker_push_latest
-$(DOCKER) push $(DOCKER_CI_REPO)$(call docker_tag,$1,$3)
-$(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):latest
-endef
-
-define docker_push_minor
-$(if $(filter-out null,$(call get_label,$2,minor)),$(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):$(call get_label,$2,minor)$(if $(filter-out null,$(call get_label,$2,imagebase)),-$(call get_label,$2,imagebase),),)
+define docker_push_operation
+$(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):$4;
 endef
 
 # this define creates the base targets and dependencies based on each fake
@@ -194,6 +181,16 @@ $(call ucase,$1)SEMAPHORES += $2
 
 # setup the build args variable if it does not exist
 $(notdir $(call image,$2,$1)).BUILDARGS +=
+
+ifeq (tag,$1)
+# tag latest
+$(notdir $(call image,$2,$1)).TAGS += latest
+# tag major
+$(notdir $(call image,$2,$1)).TAGS += $(foreach M,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,major)),$M$(foreach B,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,imagebase)),-$B))
+# tag minor
+$(notdir $(call image,$2,$1)).TAGS += $(foreach M,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,minor)),$M$(foreach B,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,imagebase)),-$B))
+endif
+
 
 ##################
 # Set Dependencies with this graph
@@ -248,8 +245,7 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	@$(call docker_tag_latest,$@,$<,tag)
-	@$(call docker_tag_minor,$@,$<,tag)
+	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_tag_operation,$@,$<,tag,$E))
 	@exit 0
 
 .PHONY: tag
@@ -265,8 +261,7 @@ ifdef ECRACCOUNTID
 	$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
-	@$(call docker_push_latest,$@,$<,push)
-	@$(call docker_push_minor,$@,$<,push)
+	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_push_operation,$@,$<,push,$E))
 	@exit 0
 endif
 else
@@ -301,6 +296,12 @@ mkhelp:
 .PHONY: showimages
 showimages:
 	$(foreach I, $(IMAGES),  $(info | $(I))      )
+	@exit 0
+
+
+.PHONY: showtags
+showtags:
+	$(foreach I, $(IMAGES),  $(info | $(I).TAGS: $($(I).TAGS))      )
 	@exit 0
 
 .PHONY: showgroups
