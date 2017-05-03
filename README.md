@@ -30,6 +30,25 @@ creates the following make build targets:
 - docker image: `docker-ci:1-docker`
 - docker tags: `docker-ci:latest` and `docker:1.11-docker`
 
+### To Use
+Using this in a docker project is simple, create a Makefile, and add the following to pull this down and include it. Add docker-ci.mk to your .gitignore so your build process picks up the latest.
+
+```
+REGISTRY_ID ?= <set this to your ecr registry, if using ecr>
+REGISTRY_REGION ?= <set to ecr region
+REGISTRY ?= $(REGISTRY_ID).dkr.ecr.$(REGISTRY_REGION).amazonaws.com
+REGISTRY_NAMESPACE ?= <set to some namespace>
+DOCKER_CI_REPO ?= $(REGISTRY)/$(REGISTRY_NAMESPACE)
+
+# USECACHE = true
+# DRYRUN = true
+
+DOCKERMK := $(shell if [ ! -e docker-ci.mk ]; then \
+                    wget -N -q https://raw.githubusercontent.com/full360/docker-ci/master/docker-ci.mk; fi)
+include docker-ci.mk
+```
+
+
 ### How it works
 The Makefile uses some trickery with semaphore files to get the dependencies correct. To start it finds all the Dockerfiles and uses it to construct a base semaphore list, for the above example:
 this semaphore is added to a variable (along with similar ones constructed for each Dockerfile found): `docker-ci/.pre-docker-9.1-jre-alpine`. This list can be seen by running `make mkhelp`
