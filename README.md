@@ -47,7 +47,7 @@ DOCKERMK := $(shell if [ ! -e docker-ci.mk ]; then \
                     wget -N -q https://raw.githubusercontent.com/full360/docker-ci/master/docker-ci.mk; fi)
 include docker-ci.mk
 ```
-
+then run `make mkhelp` to see the list of available make commands that this makefile provides.
 
 ### How it works
 The Makefile uses some trickery with semaphore files to get the dependencies correct. To start it finds all the Dockerfiles and uses it to construct a base semaphore list, for the above example:
