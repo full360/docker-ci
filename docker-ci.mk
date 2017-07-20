@@ -34,6 +34,8 @@ SHELL := bash
 
 ECR_GET_LOGIN := aws ecr get-login --registry-ids --no-include-email
 
+REVISION = $(shell git rev-parse --short HEAD)
+
 # Check DOCKER_CI_REPO
 ifndef DOCKER_CI_REPO
 $(warning warning - DOCKER_CI_REPO is not set. assuming local build)
@@ -187,6 +189,8 @@ $(notdir $(call image,$2,$1)).BUILDARGS +=
 ifeq (tag,$1)
 # tag latest
 $(notdir $(call image,$2,$1)).TAGS += latest
+# tag git revision
+$(notdir $(call image,$2,$1)).TAGS += $(REVISION)
 # tag major
 $(notdir $(call image,$2,$1)).TAGS += $(foreach M,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,major)),$M$(foreach B,$(filter-out null,$(call get_label,$(dir $2)Dockerfile,imagebase)),-$B))
 # tag minor
