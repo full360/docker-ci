@@ -32,6 +32,8 @@ SHELL := bash
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
+ECR_GET_LOGIN := aws ecr get-login --registry-ids --no-include-email
+
 # Check DOCKER_CI_REPO
 ifndef DOCKER_CI_REPO
 $(warning warning - DOCKER_CI_REPO is not set. assuming local build)
@@ -258,7 +260,7 @@ $(PUSHSEMAPHORES) :
 ifneq (,$(DOCKER_CI_REPO))
 ifdef ECRACCOUNTID
 	$(info Docker repo is AWS ECR, logging in)
-	$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
+	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
 	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_push_operation,$@,$<,push,$E))
