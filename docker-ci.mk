@@ -231,7 +231,7 @@ endef
 
 # find all docker files in local subdirectories
 DOCKERDIRS := $(shell \
-               find * -mindepth 1 -type f -name Dockerfile | xargs -L1 dirname )
+               find * -mindepth 1 -type f -name Dockerfile | xargs -n1 dirname )
 DOCKERFILES := $(DOCKERDIRS:%=%/Dockerfile)
 
 ################################################################################
