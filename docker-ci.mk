@@ -35,10 +35,10 @@ SHELL := bash
 ECR_GET_LOGIN := aws ecr get-login --no-include-email --registry-ids
 
 REVISION = $(shell git rev-parse --short HEAD)
-
+BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 # if running from CI, use build ref to tag
 ifndef CI_BUILD_REF_NAME
-LATEST_TAG = latest
+LATEST_TAG = latest-$(BRANCH)
 else
 override LATEST_TAG=latest-$(CI_BUILD_REF_NAME)
 endif
@@ -252,7 +252,7 @@ ifneq (,$(call dockerbuildargs,$(BUILDARGS)))
 endif
 ifdef ECRACCOUNTID
 	$(info Docker repo is AWS ECR, logging in)
-	$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
+	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 endif
 	echo Building: $< && \
 	cd $(dir $<) && \
