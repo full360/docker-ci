@@ -32,9 +32,16 @@ SHELL := bash
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
-ECR_GET_LOGIN := aws ecr get-login --no-include-email --registry-ids 
+ECR_GET_LOGIN := aws ecr get-login --no-include-email --registry-ids
 
 REVISION = $(shell git rev-parse --short HEAD)
+
+# if running from CI, use build ref to tag
+ifndef CI_BUILD_REF_NAME
+LATEST_TAG = latest
+else
+override LATEST_TAG=latest-$(CI_BUILD_REF_NAME)
+endif
 
 # Check DOCKER_CI_REPO
 ifndef DOCKER_CI_REPO
@@ -161,6 +168,10 @@ define docker_tag_operation
 $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$4;
 endef
 
+define docker_tag_info
+$(info $(DOCKER_CI_REPO)$(call group,$2):$4)
+endef
+
 define docker_push_operation
 $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):$4;
 endef
@@ -188,7 +199,7 @@ $(notdir $(call image,$2,$1)).BUILDARGS +=
 
 ifeq (tag,$1)
 # tag latest
-$(notdir $(call image,$2,$1)).TAGS += latest
+$(notdir $(call image,$2,$1)).TAGS += $(LATEST_TAG)
 # tag git revision
 $(notdir $(call image,$2,$1)).TAGS += $(REVISION)
 # tag major
@@ -294,6 +305,8 @@ mkhelp:
 	$(info | mkhelp                              )
 	$(info | showgroups                          )
 	$(info | showimages                          )
+	$(info | showtags                            )
+	$(info | showinfo                            )
 	$(info | inspectgroup.GROUP                  )
 	$(info | inspectimg.IMAGE                    )
 	$(info | inspect.VAR                         )
@@ -332,8 +345,15 @@ inspectimg.%:
 	  $(foreach I, $(filter $*,$(IMAGES)),  $(info | $(O)-$(I)))   )
 	@exit 0
 
-# %: all
-
+.PHONY: showinfo
+showinfo:
+	$(info Tagged Images:)
+	$(foreach I, $(IMAGES),  $(foreach E,\
+	  $($(call imagebase_from_dockerfile,\
+		$(dir $(filter %$(I), $(BUILDSEMAPHORES)))Dockerfile).TAGS),\
+		$(call docker_tag_info,$(filter %$(I), $(TAGSEMAPHORES)),\
+		$(dir $(filter %$(I), $(TAGSEMAPHORES)))Dockerfile,tag,$E))  )
+	@exit 0
 
 # debug variable values
 inspect.%  : ; @echo $* = $($*)
