@@ -250,6 +250,10 @@ $(BUILDSEMAPHORES) :
 ifneq (,$(call dockerbuildargs,$(BUILDARGS)))
 	$(info buildargs: $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS)))
 endif
+ifdef ECRACCOUNTID
+	$(info Docker repo is AWS ECR, logging in)
+	$(info $(shell eval $$(aws ecr get-login --registry-ids $(ECRACCOUNTID))))
+endif
 	echo Building: $< && \
 	cd $(dir $<) && \
 	$(DOCKER) build $(NOCACHE) $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS)) $(PULL) -t $(DOCKER_CI_REPO)$(call docker_tag,$@,build) .
