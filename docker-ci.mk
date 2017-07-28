@@ -198,7 +198,8 @@ $(call ucase,$1)SEMAPHORES += $2
 $(notdir $(call image,$2,$1)).BUILDARGS +=
 
 ifeq (tag,$1)
-# tag latest
+$(notdir $(call image,$2,$1)).TAGS += latest
+# tag latest-enhanced
 $(notdir $(call image,$2,$1)).TAGS += $(LATEST_TAG)
 # tag git revision
 $(notdir $(call image,$2,$1)).TAGS += $(REVISION)
@@ -266,8 +267,7 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_tag_operation,$@,$<,tag,$E))
-	@exit 0
+	$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_tag_operation,$@,$<,tag,$E))
 
 .PHONY: tag
 tag : $(TAGSEMAPHORES)
@@ -283,7 +283,6 @@ ifdef ECRACCOUNTID
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
 	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_push_operation,$@,$<,push,$E))
-	@exit 0
 endif
 else
 	@echo Local Only, not pushing
