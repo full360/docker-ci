@@ -164,16 +164,8 @@ define docker_tag
 $(call group,$1):$(patsubst $(call group,$1)-%,%,$(notdir $(call image,$1,$2)))
 endef
 
-define docker_tag_operation
-$(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$1,$3) $(DOCKER_CI_REPO)$(call group,$2):$4;
-endef
-
 define docker_tag_info
 $(info $(DOCKER_CI_REPO)$(call group,$2):$4)
-endef
-
-define docker_push_operation
-$(DOCKER) push $(DOCKER_CI_REPO)$(call group,$2):$4;
 endef
 
 # this define creates the base targets and dependencies based on each fake
@@ -267,7 +259,9 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_tag_operation,$@,$<,tag,$E))
+	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call group,$<) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
+
+
 
 .PHONY: tag
 tag : $(TAGSEMAPHORES)
@@ -282,7 +276,7 @@ ifdef ECRACCOUNTID
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
-	@$(foreach E,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS),$(call docker_push_operation,$@,$<,push,$E))
+	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 endif
 else
 	@echo Local Only, not pushing
