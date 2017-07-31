@@ -95,7 +95,7 @@ endif
 ##########################################################################################
 
 define create_ecr_repo
-# Check if AWS ECR
+# Check if AWS ECR repo exists. A failure here is normal if the repo exists
 -aws ecr create-repository --repository-name $(AWSECRNAMESPACE)/$(1) >/dev/null 2>&1 | true
 endef
 
@@ -275,7 +275,7 @@ ifdef ECRACCOUNTID
 	$(info Docker repo is AWS ECR, logging in)
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
-	@$(call create_ecr_repo,$(call group,$@))
+	$(call create_ecr_repo,$(call group,$@))
 	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 endif
 else
