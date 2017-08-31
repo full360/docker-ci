@@ -259,7 +259,7 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call group,$<) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
+	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$@,tag) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 
 
 
@@ -275,7 +275,7 @@ ifdef ECRACCOUNTID
 	$(info Docker repo is AWS ECR, logging in)
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
-	$(call create_ecr_repo,$(call group,$@))
+	@$(call create_ecr_repo,$(call group,$@))
 	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 endif
 else
