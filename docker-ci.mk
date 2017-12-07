@@ -286,7 +286,7 @@ endif
 push : $(PUSHSEMAPHORES)
 
 .PHONY: all
-all: $(GROUPS)
+all: $(IMAGES)
 
 .PHONY: clean
 clean:
