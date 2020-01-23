@@ -32,7 +32,7 @@ SHELL := bash
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
-ECR_GET_LOGIN := aws ecr get-login --no-include-email --registry-ids
+ECR_GET_LOGIN := aws ecr get-login --no-include-email --region $(REGISTRY_REGION) --registry-ids
 
 REVISION = $(shell git rev-parse --short HEAD)
 BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
