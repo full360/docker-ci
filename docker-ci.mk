@@ -102,7 +102,7 @@ endif
 
 define create_ecr_repo
 # Check if AWS ECR repo exists. A failure here is normal if the repo exists
-aws ecr create-repository --region $(AWS_DEFAULT_REGION) --repository-name $(AWSECRNAMESPACE)/$(1) | true
+-aws ecr create-repository --region $(AWS_DEFAULT_REGION) --repository-name $(AWSECRNAMESPACE)/$(1) | true
 endef
 
 # parse the Dockerfile to extract the build variables stored in LABEL
