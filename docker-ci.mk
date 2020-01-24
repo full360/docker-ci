@@ -87,7 +87,7 @@ endif
 endif
 
 # if additional registeries are specified login to those
-ifndef ADDITIONAL_REGISTRIES
+ifdef ADDITIONAL_REGISTRIES
 $(info Additional registries specified, logging in to $(ADDITIONAL_REGISTRIES))
 $(foreach R, $(ADDITIONAL_REGISTRIES), $(info $(shell eval $$($(ECR_GET_LOGIN) $(R)))))
 endif
