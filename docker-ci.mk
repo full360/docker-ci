@@ -259,8 +259,7 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$@,tag) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
-
+	for x in $(subst /,-,$($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$@,tag) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 
 
 .PHONY: tag
