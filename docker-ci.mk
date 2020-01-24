@@ -275,7 +275,7 @@ ifdef ECRACCOUNTID
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
-	for x in $($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS)); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
+	for x in $(subst /,-,$($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 endif
 else
 	@echo Local Only, not pushing
