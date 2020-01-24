@@ -86,6 +86,9 @@ AWSECRNAMESPACE := $(lastword $(subst /, ,$(DOCKER_CI_REPO)))
 endif
 endif
 
+# if additional registeries are specified login to those
+$(foreach R, $(ADDITIONAL_REGISTRIES), $(info $(shell eval $$($(ECR_GET_LOGIN) $(R)))))
+
 ifneq (,$(DOCKER_CI_REPO))
 override DOCKER_CI_REPO := $(DOCKER_CI_REPO)/
 endif
