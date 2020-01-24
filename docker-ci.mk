@@ -87,7 +87,10 @@ endif
 endif
 
 # if additional registeries are specified login to those
+ifndef ADDITIONAL_REGISTRIES
+$(info Additional registries specified, logging in to $(ADDITIONAL_REGISTRIES))
 $(foreach R, $(ADDITIONAL_REGISTRIES), $(info $(shell eval $$($(ECR_GET_LOGIN) $(R)))))
+endif
 
 ifneq (,$(DOCKER_CI_REPO))
 override DOCKER_CI_REPO := $(DOCKER_CI_REPO)/
@@ -247,7 +250,7 @@ ifneq (,$(call dockerbuildargs,$(BUILDARGS)))
 	$(info buildargs: $(call dockerbuildargs,$(BUILDARGS)) $(call dockerbuildargs,$($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).BUILDARGS)))
 endif
 ifdef ECRACCOUNTID
-	$(info Docker repo is AWS ECR, logging in)
+	$(info Docker repo is AWS ECR, logging in to $(ECRACCOUNTID))
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 endif
 	echo Building: $< && \
@@ -274,7 +277,7 @@ tag : $(TAGSEMAPHORES)
 $(PUSHSEMAPHORES) :
 ifneq (,$(DOCKER_CI_REPO))
 ifdef ECRACCOUNTID
-	$(info Docker repo is AWS ECR, logging in)
+	$(info Docker repo is AWS ECR, logging in to $(ECRACCOUNTID))
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
 	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
