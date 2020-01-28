@@ -234,10 +234,17 @@ DOCKERDIRS := $(shell \
 
 # Check if any need to be excluded
 ifdef EXCLUDE_DOCKERDIR
-$(info filtering - $(EXCLUDE_DOCKERDIR))
+$(info filtering out - $(EXCLUDE_DOCKERDIR))
 FILTERED_DIRS = $(filter-out %$(EXCLUDE_DOCKERDIR), $(DOCKERDIRS))
 DOCKERDIRS := $(FILTERED_DIRS)
 endif
+
+ifdef INCLUDE_DOCKERDIR
+$(info filtering in - $(INCLUDE_DOCKERDIR))
+FILTERED_DIRS = $(filter %$(INCLUDE_DOCKERDIR), $(DOCKERDIRS))
+DOCKERDIRS += $(FILTERED_DIRS)
+endif
+
 
 DOCKERFILES := $(DOCKERDIRS:%=%/Dockerfile)
 
