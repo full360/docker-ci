@@ -231,6 +231,14 @@ endef
 # find all docker files in local subdirectories
 DOCKERDIRS := $(shell \
                find * -mindepth 1 -type f -name Dockerfile | xargs -n1 dirname )
+
+# Check if any need to be excluded
+ifdef EXCLUDE_DOCKERDIR
+$(info filtering - $(EXCLUDE_DOCKERDIR))
+FILTERED_DIRS = $(filter-out %$(EXCLUDE_DOCKERDIR), $(DOCKERDIRS))
+DOCKERDIRS := $(FILTERED_DIRS)
+endif
+
 DOCKERFILES := $(DOCKERDIRS:%=%/Dockerfile)
 
 ################################################################################
@@ -265,7 +273,7 @@ build : $(BUILDSEMAPHORES)
 ################################################################################
 $(TAGSEMAPHORES) :
 	@echo	Tagging: $<
-	for x in $(subst /,-,$($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$@,tag) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
+	for x in $(subst /,-,$(sort $($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) tag $(DOCKER_CI_REPO)$(call docker_tag,$@,tag) $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 
 
 .PHONY: tag
@@ -275,14 +283,14 @@ tag : $(TAGSEMAPHORES)
 # Docker Push Target
 ################################################################################
 $(PUSHSEMAPHORES) :
+	@echo	Pushing: $<
 ifneq (,$(DOCKER_CI_REPO))
 ifdef ECRACCOUNTID
 	$(info Docker repo is AWS ECR, logging in to $(ECRACCOUNTID))
 	$(info $(shell eval $$($(ECR_GET_LOGIN) $(ECRACCOUNTID))))
-	@echo	Pushing: $<
 	@$(call create_ecr_repo,$(call group,$@))
-	for x in $(subst /,-,$($(sort $(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 endif
+	for x in $(subst /,-,$(sort $($(call imagebase_from_dockerfile,$(dir $<)Dockerfile).TAGS))); do $(DOCKER) push $(DOCKER_CI_REPO)$(call group,$<):$$x; done
 else
 	@echo Local Only, not pushing
 endif
