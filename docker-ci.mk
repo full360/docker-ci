@@ -308,6 +308,24 @@ push : $(PUSHSEMAPHORES)
 .PHONY: all
 all: $(IMAGES)
 
+
+# This pulls down a file from s3 to share the ecr repo to other accounts for
+# the gitlab runner
+.PHONY: sharerepo
+sharerepo:
+	declare accounts="" \
+	data=$$(aws s3 cp s3://$(SHAREECRREPOACCTS) - ); \
+	while IFS=, read -r acct name email expiration runner; do \
+	  if [ $$runner == "true" ]; then \
+		  accounts="\"arn:aws:iam::$${acct}:role/prod-spot-gitlab-runner-docker-machine-role\",$${accounts}"; \
+		  accounts="\"arn:aws:iam::$${acct}:role/prod-spot-gitlab-runner-instance-role\",$${accounts}"; \
+		fi; \
+	done < <(echo "$${data}"); \
+	policy=$$( cat ecr_policy.json.tpl | jq --argjson accounts "[$${accounts%?}]" '.Statement[].Principal.AWS=($$accounts | .)' ); \
+	echo "$${policy}"; \
+	aws ecr set-repository-policy --registry-id $(REGISTRY_ID) --repository-name  $(REGISTRY_NAMESPACE)/pitbull-docker --policy-text "$${policy}"
+
+
 .PHONY: clean
 clean:
 	@find . -type f -name .build-* -exec rm {} \; && \
